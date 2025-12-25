@@ -5,81 +5,87 @@ export default {
     }
 
     const body = await request.json();
-
-    const defect = body.defect; // "adhesion" | "pinhole"
-    const context = body.context || {};
+    const defect = body.defect;
 
     let result;
 
     switch (defect) {
       case "adhesion":
-        result = analyzeAdhesion(context);
+        result = analyzeAdhesion(body);
         break;
 
       case "pinhole":
-        result = analyzePinhole(context);
+        result = analyzePinhole(body);
         break;
 
       default:
         result = {
-          error: "Unknown defect type"
+          error: "Unknown defect type",
+          supported: ["adhesion", "pinhole"],
         };
     }
 
     return new Response(JSON.stringify(result, null, 2), {
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json" },
     });
-  }
+  },
 };
 
 /* =========================
-   TECHNOLOGICAL LOGIC
+   ADHESION ANALYSIS LOGIC
    ========================= */
 
-function analyzeAdhesion(ctx: any) {
+function analyzeAdhesion(data: any) {
   const steps: string[] = [];
 
-  steps.push("Проверка на режим на изсушаване");
+  // 1. Drying regime
+  steps.push(
+    "Check drying regime: temperature and time (line speed). " +
+    "Increase temperature and/or increase drying time if below target."
+  );
 
-  if (!ctx.drying || ctx.drying.temperature < ctx.targetTemperature) {
-    steps.push("→ Увеличи температурата на изсушаване");
-  }
+  // 2. Coating amount
+  steps.push(
+    "Check coating amount. If film is too thin, increase lacquer quantity."
+  );
 
-  if (!ctx.drying || ctx.drying.time < ctx.targetTime) {
-    steps.push("→ Увеличи времето (намали скоростта)");
-  }
+  // 3. Solvent check
+  steps.push(
+    "Verify solvent type and ratio. Check for unapproved or different thinner."
+  );
 
-  steps.push("Проверка на количество лак");
-  steps.push("→ Увеличи количеството лак при нужда");
-
-  steps.push("Проверка на разредител");
-  steps.push("→ Възможно е използван различен или неподходящ разредител");
-
-  steps.push("Проверка на партида лак");
-  steps.push("→ Тествай с друга партида лак");
+  // 4. Lacquer batch
+  steps.push(
+    "If issue persists, suspect lacquer batch. Test with another batch."
+  );
 
   return {
     defect: "adhesion",
-    priority: "drying → film build → solvent → batch",
-    steps
+    priority: "process first, material second",
+    recommended_steps: steps,
   };
 }
 
-function analyzePinhole(ctx: any) {
+/* =========================
+   PINHOLE ANALYSIS LOGIC
+   ========================= */
+
+function analyzePinhole(data: any) {
   const steps: string[] = [];
 
-  steps.push("Проверка на вискозитет на лака");
+  // 1. Viscosity
+  steps.push(
+    "Check lacquer viscosity first. Adjust to target viscosity range."
+  );
 
-  if (!ctx.viscosity || ctx.viscosity > ctx.maxViscosity) {
-    steps.push("→ Намали вискозитета (корекция с разредител)");
-  }
-
-  steps.push("Проверка за омасляване / замърсяване на повърхността");
-  steps.push("→ Провери почистване, масла, силикони");
+  // 2. Surface contamination
+  steps.push(
+    "Check for surface contamination or oiling of substrate."
+  );
 
   return {
     defect: "pinhole",
-    priority: "viscosity → surface contamination",
-    steps
+    priority: "viscosity first",
+    recommended_steps: steps,
   };
 }
